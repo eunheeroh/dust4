@@ -1,6 +1,6 @@
 {
   "name": "공기신호등",
-  "short_name": "공기",
+  "short_name": "공기앱",
   "description": "실시간 대기오염 정보를 신호등으로 한눈에 확인하는 웹앱",
   "start_url": "/",
   "scope": "/",
