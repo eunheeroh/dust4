@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!-- 문자 인코딩 설정 (한글 깨짐 방지) -->
+  <meta charset="UTF-8">
+  <!-- 모바일 및 다양한 기기를 위한 반응형 뷰포트 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 웹 애플리케이션 제목 -->
+  <title>공기 신호등 - 실시간 미세먼지</title>
+
+  <!-- PWA: 웹 앱 매니페스트(manifest.json) 연결 -->
+  <link rel="manifest" href="/manifest.json">
+  <!-- 안드로이드 Chrome 및 모바일 상단 바 테마 색상 -->
+  <meta name="theme-color" content="#3b82f6">
+  <!-- 모바일 웹앱 전체화면 지원 -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <!-- iOS Safari 지원 메타 태그 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="공기신호등">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+  <!-- Pretendard 웹폰트 불러오기 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+  <!-- Chart.js 라이브러리 CDN 불러오기 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- 외부 스타일시트(style.css) 연결 -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 전체 화면을 감싸는 반응형 메인 컨테이너 -->
+  <div class="container">
+    
+    <!-- 상단 헤더: 타이틀 및 시·도 드롭다운 -->
+    <header class="header">
+      <div class="header-title-box">
+        <span class="app-icon">🚦</span>
+        <h1>공기 신호등</h1>
+      </div>
+      <!-- 지역 선택을 위한 드롭다운 -->
+      <div class="selector-box">
+        <label for="sidoSelect">지역 선택</label>
+        <select id="sidoSelect">
+          <option value="전국">전국</option>
+          <option value="서울" selected>서울</option>
+          <option value="부산">부산</option>
+          <option value="대구">대구</option>
+          <option value="인천">인천</option>
+          <option value="광주">광주</option>
+          <option value="대전">대전</option>
+          <option value="울산">울산</option>
+          <option value="세종">세종</option>
+          <option value="경기">경기</option>
+          <option value="강원">강원</option>
+          <option value="충북">충북</option>
+          <option value="충남">충남</option>
+          <option value="전북">전북</option>
+          <option value="전남">전남</option>
+          <option value="경북">경북</option>
+          <option value="경남">경남</option>
+          <option value="제주">제주</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- 맨 위: 그 지역 대표 상태를 보여주는 '대형 공기 신호등' 섹션 -->
+    <section class="traffic-section" id="trafficSection">
+      <!-- 지역 이름 -->
+      <div class="traffic-region" id="trafficRegion">서울</div>
+      
+      <!-- 신호등 이모지와 상태 텍스트 (아주 크게 표시) -->
+      <div class="traffic-hero">
+        <span class="traffic-emoji" id="trafficEmoji">⏳</span>
+        <span class="traffic-status" id="trafficStatus">불러오는 중...</span>
+      </div>
+
+      <!-- 평균 미세먼지 수치 -->
+      <div class="traffic-value-box">
+        <span class="traffic-value-label">평균 미세먼지</span>
+        <span class="traffic-value" id="trafficValue">-</span>
+      </div>
+
+      <!-- 한 줄 안내 문구 (나쁨 이상이면 '외출 시 마스크를 챙기세요') -->
+      <div class="traffic-guide-box" id="trafficGuideBox">
+        <p class="traffic-guide" id="trafficGuide">데이터를 불러오는 중입니다...</p>
+      </div>
+
+      <!-- 기준 측정 시각 (한국어 형식) -->
+      <p class="traffic-time" id="trafficTime">-</p>
+    </section>
+
+    <!-- 로딩 스피너 및 상태 안내 메시지 -->
+    <div id="statusMessage" class="status-message">
+      <div class="spinner"></div>
+      <p id="statusText">데이터를 불러오는 중...</p>
+    </div>
+
+    <!-- 미세먼지 상위 10개 가로 막대그래프 섹션 -->
+    <section class="chart-section" id="chartSection">
+      <div class="section-header">
+        <div>
+          <h2>미세먼지 수치 TOP 10 (높은 순)</h2>
+          <p class="section-desc">측정 안 됨을 제외한 상위 10개 측정소 현황</p>
+        </div>
+      </div>
+      <!-- 차트 캔버스 컨테이너 -->
+      <div class="chart-container">
+        <canvas id="dustChart"></canvas>
+      </div>
+    </section>
+
+    <!-- 측정소별 카드 목록 섹션 -->
+    <section class="stations-section">
+      <div class="section-header">
+        <div>
+          <h2>측정소별 전체 실시간 현황</h2>
+          <p class="section-desc">지역 내 모든 측정소의 세부 측정값</p>
+        </div>
+        <span class="station-count" id="stationCount"></span>
+      </div>
+      <!-- 측정소 카드가 동적으로 추가되는 그리드 -->
+      <div class="card-grid" id="cardGrid"></div>
+    </section>
+
+  </div>
+
+  <!-- 자바스크립트 로직 연결 -->
+  <script src="script.js"></script>
+  
+  <!-- PWA 서비스 워커(sw.js) 등록 스크립트 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('[PWA] 서비스 워커 등록 완료, Scope:', registration.scope);
+          })
+          .catch((error) => {
+            console.error('[PWA] 서비스 워커 등록 실패:', error);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
